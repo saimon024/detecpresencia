@@ -1,29 +1,30 @@
 import streamlit as st
 import paho.mqtt.client as mqtt
 import threading
-import time
 
 # ---------- CONFIG MQTT ----------
 BROKER = "broker.hivemq.com"
 PORT = 1883
 TOPIC = "wowki/presencia"
 
-# ---------- VARIABLE GLOBAL ----------
-presencia_detectada = False
+# ---------- ESTADOS ----------
+if "presencia" not in st.session_state:
+    st.session_state.presencia = False
 
-# ---------- CALLBACKS MQTT (PAHO 1.6.1) ----------
+if "mqtt_started" not in st.session_state:
+    st.session_state.mqtt_started = False
+
+# ---------- CALLBACKS MQTT ----------
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         client.subscribe(TOPIC)
 
 def on_message(client, userdata, msg):
-    global presencia_detectada
-    mensaje = msg.payload.decode()
-
-    if mensaje == "1":
-        presencia_detectada = True
-    elif mensaje == "0":
-        presencia_detectada = False
+    payload = msg.payload.decode()
+    if payload == "1":
+        st.session_state.presencia = True
+    elif payload == "0":
+        st.session_state.presencia = False
 
 # ---------- HILO MQTT ----------
 def mqtt_worker():
@@ -33,23 +34,21 @@ def mqtt_worker():
     client.connect(BROKER, PORT, 60)
     client.loop_forever()
 
-# ---------- INICIAR MQTT UNA SOLA VEZ ----------
-if "mqtt_started" not in st.session_state:
+# ---------- INICIAR MQTT ----------
+if not st.session_state.mqtt_started:
     threading.Thread(target=mqtt_worker, daemon=True).start()
     st.session_state.mqtt_started = True
 
 # ---------- UI ----------
 st.title("Detector de Presencia (MQTT)")
 
-if presencia_detectada:
+if st.session_state.presencia:
     st.success("👀 Presencia detectada")
-    st.audio("audio.mp3", autoplay=True)
+
+    if st.button("Reproducir audio"):
+        st.audio("audio.mp3")
 else:
     st.info("Esperando presencia...")
 
 st.caption("ESP32 (Wokwi) → MQTT → Streamlit")
-
-# ---------- REFRESH CONTROLADO ----------
-time.sleep(0.5)
-st.rerun()
 
