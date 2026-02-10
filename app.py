@@ -1,6 +1,7 @@
 import streamlit as st
 import paho.mqtt.client as mqtt
 import threading
+import time
 
 # ---------- CONFIG MQTT ----------
 BROKER = "broker.hivemq.com"
@@ -10,22 +11,22 @@ TOPIC = "wowki/presencia"
 # ---------- VARIABLE GLOBAL ----------
 presencia_detectada = False
 
-# ---------- CALLBACKS MQTT ----------
+# ---------- CALLBACKS MQTT (PAHO 1.6.1) ----------
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         client.subscribe(TOPIC)
 
 def on_message(client, userdata, msg):
     global presencia_detectada
-    payload = msg.payload.decode()
+    mensaje = msg.payload.decode()
 
-    if payload == "1":
+    if mensaje == "1":
         presencia_detectada = True
-    elif payload == "0":
+    elif mensaje == "0":
         presencia_detectada = False
 
 # ---------- HILO MQTT ----------
-def mqtt_loop():
+def mqtt_worker():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
@@ -34,7 +35,7 @@ def mqtt_loop():
 
 # ---------- INICIAR MQTT UNA SOLA VEZ ----------
 if "mqtt_started" not in st.session_state:
-    threading.Thread(target=mqtt_loop, daemon=True).start()
+    threading.Thread(target=mqtt_worker, daemon=True).start()
     st.session_state.mqtt_started = True
 
 # ---------- UI ----------
@@ -48,6 +49,7 @@ else:
 
 st.caption("ESP32 (Wokwi) → MQTT → Streamlit")
 
-# ---------- AUTO REFRESH CADA 0.5s ----------
-st.autorefresh(interval=500, key="mqtt_refresh")
+# ---------- REFRESH CONTROLADO ----------
+time.sleep(0.5)
+st.rerun()
 
