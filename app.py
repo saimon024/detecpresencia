@@ -47,7 +47,7 @@ st.title("Detector de Presencia (MQTT)")
 
 if st.session_state.presencia:
     st.success("👀 Presencia detectada")
-    st.audio("audio.mp3", autoplay=True)
+    st.audio("audio(2).mp3", autoplay=True)
 else:
     st.info("Esperando presencia...")
 
